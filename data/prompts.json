@@ -1,0 +1,12 @@
+[
+  {"title":"Explain Like a Beginner","category":"Learning","content":"Explain this programming concept from beginner to interview level. Use a simple analogy, a Python example, a Java example, common mistakes, and one exercise."},
+  {"title":"Python vs Java","category":"Comparison","content":"Compare this concept in Python and Java. Show syntax, type system differences, performance considerations, common mistakes, and when each approach is useful."},
+  {"title":"Debug My Code","category":"Debugging","content":"Analyze the code I provide. Identify the error, explain why it happens, show the corrected version, and give me one similar exercise."},
+  {"title":"Code Review","category":"Engineering","content":"Review this code as a senior software engineer. Check correctness, readability, maintainability, testing, security, and performance. Suggest improvements."},
+  {"title":"Interview Questions","category":"Interview","content":"Generate beginner, intermediate, and advanced interview questions about this topic. Include concise model answers and follow-up questions."},
+  {"title":"LeetCode Coach","category":"DSA","content":"Act as my LeetCode coach. Help me understand the pattern, constraints, edge cases, complexity, and solution approach before showing the final implementation."},
+  {"title":"Cloud Engineer Tutor","category":"Cloud","content":"Teach this cloud engineering topic from fundamentals to practical implementation. Include architecture, commands, common mistakes, security concerns, and an interview section."},
+  {"title":"Project Mentor","category":"Projects","content":"Act as my project mentor. Break this project into milestones, explain the engineering decisions, identify risks, and define what I should test before considering each milestone complete."},
+  {"title":"Daily Reflection","category":"Productivity","content":"Review what I learned today and help me identify completed work, weak areas, mistakes, tomorrow's priorities, and one measurable improvement."
+  }
+]
