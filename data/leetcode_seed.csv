@@ -1,0 +1,30 @@
+number,title,difficulty,topic,acceptance,frequency,stage
+1,Two Sum,Easy,Array,49.5,High,Foundation
+217,Contains Duplicate,Easy,Hash Table,61.2,High,Foundation
+242,Valid Anagram,Easy,Hash Table,65.1,High,Foundation
+121,Best Time to Buy and Sell Stock,Easy,Array,56.8,High,Foundation
+20,Valid Parentheses,Easy,Stack,40.7,High,Foundation
+21,Merge Two Sorted Lists,Easy,Linked List,63.4,Medium,Foundation
+704,Binary Search,Easy,Binary Search,56.2,High,Foundation
+733,Flood Fill,Easy,Graph,71.5,Medium,Foundation
+141,Linked List Cycle,Easy,Linked List,51.4,High,Foundation
+226,Invert Binary Tree,Easy,Tree,77.2,High,Foundation
+104,Maximum Depth of Binary Tree,Easy,Tree,76.1,High,Foundation
+169,Majority Element,Easy,Array,65.3,Medium,Foundation
+70,Climbing Stairs,Easy,Dynamic Programming,53.8,High,Foundation
+238,Product of Array Except Self,Medium,Array,67.5,High,Intermediate
+3,Longest Substring Without Repeating Characters,Medium,String,36.8,High,Intermediate
+15,3Sum,Medium,Two Pointers,37.1,High,Intermediate
+11,Container With Most Water,Medium,Two Pointers,58.4,Medium,Intermediate
+49,Group Anagrams,Medium,Hash Table,71.6,High,Intermediate
+347,Top K Frequent Elements,Medium,Heap,65.2,High,Intermediate
+102,Binary Tree Level Order Traversal,Medium,Tree,70.4,High,Intermediate
+98,Validate Binary Search Tree,Medium,Tree,35.6,High,Intermediate
+200,Number of Islands,Medium,Graph,59.8,High,Intermediate
+128,Longest Consecutive Sequence,Medium,Hash Table,47.2,High,Intermediate
+198,House Robber,Medium,Dynamic Programming,53.2,High,Intermediate
+146,LRU Cache,Medium,Design,46.9,High,Advanced
+207,Course Schedule,Medium,Graph,49.7,High,Advanced
+322,Coin Change,Medium,Dynamic Programming,46.3,High,Advanced
+33,Search in Rotated Sorted Array,Medium,Binary Search,43.5,Medium,Advanced
+236,Lowest Common Ancestor of a Binary Tree,Medium,Tree,67.2,Medium,Advanced

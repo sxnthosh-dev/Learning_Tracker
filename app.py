@@ -1,295 +1,200 @@
 import streamlit as st
-import httpx
+import requests
 
-API_BASE_URL = "http://127.0.0.1:8000/api/v1"
-
-st.set_page_config(
-    page_title="DevOps Job-Readiness Tracker",
-    layout="wide"
+from pages.legacy import dashboard, tasks, dsa_tracker
+from pages.software_cloud import (
+    home,
+    python_java,
+    ai_tutor,
+    leetcode,
+    daily_plan,
+    daily_tracker,
+    cloud,
+    projects,
+    analytics,
+    prompt_library,
+    preferences,
 )
-
-st.title("📊 DevOps Job-Readiness Tracker")
 
 
 # ============================================================
-# Sidebar Navigation
+# PAGE CONFIGURATION
+# ============================================================
+
+st.set_page_config(
+    page_title="DevOps Job-Readiness Tracker",
+    page_icon="📊",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+
+# ============================================================
+# BACKEND HEALTH CHECK
+# ============================================================
+
+API_BASE_URL = "http://127.0.0.1:8000"
+
+@st.cache_data(ttl=10)
+def check_backend_status() -> bool:
+    try:
+        res = requests.get(f"{API_BASE_URL}/health", timeout=2)
+        return res.status_code == 200
+    except Exception:
+        return False
+
+
+# ============================================================
+# APPLICATION HEADER & STATUS
+# ============================================================
+
+st.title("📊 DevOps Job-Readiness Tracker")
+
+if not check_backend_status():
+    st.error(
+        "⚠️ **FastAPI Backend Offline**: Make sure Uvicorn is running at "
+        "`http://127.0.0.1:8000` via `uvicorn main:app --reload`."
+    )
+
+
+# ============================================================
+# SIDEBAR NAVIGATION
 # ============================================================
 
 st.sidebar.header("Navigation")
 
 page = st.sidebar.radio(
     "Go to",
-    ["Dashboard", "Tasks", "DSA Tracker"]
+    [
+        "Dashboard",
+        "Tasks",
+        "DSA Tracker",
+        "Software + Cloud Engineer",
+    ],
 )
 
 
 # ============================================================
-# Dashboard
+# ORIGINAL / LEGACY TRACKER
 # ============================================================
 
 if page == "Dashboard":
-
-    st.header("Overall Dashboard")
-
-    try:
-        response = httpx.get(
-            f"{API_BASE_URL}/dashboard",
-            timeout=10.0
-        )
-
-        if response.status_code == 200:
-
-            data = response.json()
-
-            # ------------------------------------------------
-            # Extract nested dashboard values
-            # ------------------------------------------------
-
-            overall_pct = data.get(
-                "overall", {}
-            ).get(
-                "pct_done",
-                0.0
-            )
-
-            active_phase_title = data.get(
-                "active_phase", {}
-            ).get(
-                "title",
-                "N/A"
-            )
-
-            days_left = data.get(
-                "countdown", {}
-            ).get(
-                "days",
-                0
-            )
-
-            # ------------------------------------------------
-            # Render Metrics
-            # ------------------------------------------------
-
-            col1, col2, col3 = st.columns(3)
-
-            col1.metric(
-                "Overall Progress",
-                f"{overall_pct:.1f}%"
-            )
-
-            col2.metric(
-                "Active Phase",
-                active_phase_title
-            )
-
-            col3.metric(
-                "Days Remaining",
-                days_left
-            )
-
-            st.divider()
-
-            # ------------------------------------------------
-            # Next Up Tasks
-            # ------------------------------------------------
-
-            st.subheader("📌 Next Up Tasks")
-
-            next_up = data.get("next_up", [])
-
-            if next_up:
-
-                for task in next_up:
-
-                    phase_code = task.get(
-                        "phase_code",
-                        "N/A"
-                    )
-
-                    item = task.get(
-                        "item",
-                        "Unnamed task"
-                    )
-
-                    st.write(
-                        f"- **[{phase_code}]** {item}"
-                    )
-
-            else:
-                st.info("No upcoming tasks found.")
-
-        else:
-
-            st.error(
-                "Failed to load dashboard metrics from API."
-            )
-
-    except Exception as e:
-
-        st.error(
-            f"Cannot connect to API server: {e}"
-        )
-
-
-# ============================================================
-# Tasks
-# ============================================================
+    dashboard()
 
 elif page == "Tasks":
-    st.header("Task Management")
-
-    try:
-        response = httpx.get(
-            f"{API_BASE_URL}/tasks",
-            timeout=10.0
-        )
-
-        if response.status_code == 200:
-            tasks = response.json()
-
-            if not tasks:
-                st.info("No tasks found.")
-
-            else:
-                # Table header
-                header1, header2, header3, header4 = st.columns(
-                    [0.5, 3, 1, 1]
-                )
-
-                header1.write("**#**")
-                header2.write("**Task**")
-                header3.write("**Status**")
-                header4.write("**Action**")
-
-                st.divider()
-
-                for task in tasks:
-
-                    # API task ID
-                    task_id = task.get("id")
-
-                    # Task title
-                    task_title = (
-                        task.get("item")
-                        or task.get("task_name")
-                        or task.get("title")
-                        or "Unnamed Task"
-                    )
-
-                    # Task status
-                    task_status = task.get(
-                        "status",
-                        "Not Started"
-                    )
-
-                    col1, col2, col3, col4 = st.columns(
-                        [0.5, 3, 1, 1]
-                    )
-
-                    # Actual database/API task number
-                    col1.write(f"**{task_id}**")
-
-                    # Task name
-                    col2.write(f"**{task_title}**")
-
-                    # Status
-                    col3.write(f"`{task_status}`")
-
-                    # Cycle status
-                    if col4.button(
-                        "Cycle Status",
-                        key=f"btn_task_{task_id}"
-                    ):
-                        update_response = httpx.post(
-                            f"{API_BASE_URL}/tasks/"
-                            f"{task_id}/cycle-status",
-                            timeout=10.0
-                        )
-
-                        if update_response.status_code == 200:
-                            st.rerun()
-
-                        else:
-                            st.error(
-                                f"Failed to update task #{task_id}. "
-                                f"Server responded with status code "
-                                f"{update_response.status_code}."
-                            )
-
-        else:
-            st.error(
-                f"Failed to fetch tasks. "
-                f"Server responded with status code "
-                f"{response.status_code}."
-            )
-
-    except httpx.RequestError as e:
-        st.error(
-            f"Cannot connect to API server: {e}"
-        )
-
-    except Exception as e:
-        st.error(
-            f"Error fetching tasks: {e}"
-        )
-
-
-# ============================================================
-# DSA Tracker
-# ============================================================
+    tasks()
 
 elif page == "DSA Tracker":
+    dsa_tracker()
 
-    st.header("DSA Log")
 
-    with st.form("add_dsa_form"):
+# ============================================================
+# SOFTWARE + CLOUD ENGINEER TRACKER
+# ============================================================
 
-        topic = st.text_input(
-            "Topic"
-        )
+elif page == "Software + Cloud Engineer":
 
-        pattern = st.text_input(
-            "Pattern"
-        )
+    st.sidebar.divider()
 
-        problem = st.text_input(
-            "Problem Name"
-        )
+    st.sidebar.subheader("Software + Cloud")
 
-        submitted = st.form_submit_button(
-            "Submit Problem"
-        )
+    software_cloud_page = st.sidebar.radio(
+        "Section",
+        [
+            "Home",
+            "Python + Java",
+            "AI Programming Tutor",
+            "LeetCode Practice",
+            "Daily Plan",
+            "Daily Tracker",
+            "Cloud Engineer Roadmap",
+            "Projects",
+            "Analytics",
+            "Prompt Library",
+            "Preferences",
+        ],
+        key="software_cloud_navigation",
+    )
 
-        if submitted:
+    st.sidebar.divider()
 
-            payload = {
-                "topic": topic,
-                "pattern": pattern,
-                "problem_name": problem
-            }
+    st.sidebar.caption(
+        "Software + Cloud Engineer Career Tracker"
+    )
 
-            try:
+    # --------------------------------------------------------
+    # HOME
+    # --------------------------------------------------------
 
-                response = httpx.post(
-                    f"{API_BASE_URL}/dsa",
-                    json=payload,
-                    timeout=10.0
-                )
+    if software_cloud_page == "Home":
+        home()
 
-                if response.status_code in [200, 201]:
+    # --------------------------------------------------------
+    # PYTHON + JAVA
+    # --------------------------------------------------------
 
-                    st.success(
-                        "DSA entry saved!"
-                    )
+    elif software_cloud_page == "Python + Java":
+        python_java()
 
-                else:
+    # --------------------------------------------------------
+    # AI PROGRAMMING TUTOR
+    # --------------------------------------------------------
 
-                    st.error(
-                        "Failed to save DSA entry."
-                    )
+    elif software_cloud_page == "AI Programming Tutor":
+        ai_tutor()
 
-            except Exception as e:
+    # --------------------------------------------------------
+    # LEETCODE
+    # --------------------------------------------------------
 
-                st.error(
-                    f"Error saving DSA entry: {e}"
-                )
+    elif software_cloud_page == "LeetCode Practice":
+        leetcode()
+
+    # --------------------------------------------------------
+    # DAILY PLAN
+    # --------------------------------------------------------
+
+    elif software_cloud_page == "Daily Plan":
+        daily_plan()
+
+    # --------------------------------------------------------
+    # DAILY TRACKER
+    # --------------------------------------------------------
+
+    elif software_cloud_page == "Daily Tracker":
+        daily_tracker()
+
+    # --------------------------------------------------------
+    # CLOUD ROADMAP
+    # --------------------------------------------------------
+
+    elif software_cloud_page == "Cloud Engineer Roadmap":
+        cloud()
+
+    # --------------------------------------------------------
+    # PROJECTS
+    # --------------------------------------------------------
+
+    elif software_cloud_page == "Projects":
+        projects()
+
+    # --------------------------------------------------------
+    # ANALYTICS
+    # --------------------------------------------------------
+
+    elif software_cloud_page == "Analytics":
+        analytics()
+
+    # --------------------------------------------------------
+    # PROMPT LIBRARY
+    # --------------------------------------------------------
+
+    elif software_cloud_page == "Prompt Library":
+        prompt_library()
+
+    # --------------------------------------------------------
+    # PREFERENCES
+    # --------------------------------------------------------
+
+    elif software_cloud_page == "Preferences":
+        preferences()

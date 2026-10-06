@@ -40,11 +40,55 @@ from sqlalchemy.orm import Session
 #   uvicorn devops_tracker.main:app --reload
 # ============================================================
 
+# ============================================================
+# IMPORT COMPATIBILITY
+# ============================================================
+# Supports BOTH:
+#
+#   uvicorn main:app --reload
+#
+# and:
+#
+#   uvicorn devops_tracker.main:app --reload
+# ============================================================
+
 try:
     import schemas
     import services
     import models
+    import feature_schemas
+    import feature_services
+
     from database import SessionLocal, get_db, init_db
+
+    from models import (
+        DsaEntry,
+        JobStatus,
+        MistakeEntry,
+        Phase,
+        PlanSettings,
+        Task,
+        TaskView,
+    )
+
+except ImportError:
+    import schemas
+    import services
+    import models
+    import feature_schemas
+    import feature_services
+
+    from database import SessionLocal, get_db, init_db
+
+    from models import (
+        DsaEntry,
+        JobStatus,
+        MistakeEntry,
+        Phase,
+        PlanSettings,
+        Task,
+        TaskView,
+    )
     from models import ( 
         DsaEntry,
         JobStatus,
@@ -88,6 +132,7 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
 
     with SessionLocal() as db:
         services.ensure_seeded(db)
+        feature_services.seed_feature_data(db)
 
     yield
 
@@ -676,8 +721,487 @@ def mistakes_delete(
 
 
 # ============================================================
-# ADMIN
+# SOFTWARE + CLOUD ENGINEER TRACKER
 # ============================================================
+
+# ------------------------------------------------------------
+# HOME
+# ------------------------------------------------------------
+
+@api.get(
+    "/home",
+    response_model=feature_schemas.HomeSummaryRead,
+    tags=["software-cloud"],
+)
+def feature_home(db: DB) -> dict:
+    return feature_services.get_home_summary(db)
+
+
+# ------------------------------------------------------------
+# PYTHON + JAVA TOPIC PROGRESS
+# ------------------------------------------------------------
+
+@api.get(
+    "/topic-progress",
+    response_model=list[feature_schemas.TopicProgressRead],
+    tags=["software-cloud"],
+)
+def topic_progress_list(
+    db: DB,
+    language: Optional[str] = None,
+    topic_status: Annotated[
+        Optional[str],
+        Query(alias="status"),
+    ] = None,
+) -> list:
+    return feature_services.list_topic_progress(
+        db,
+        language=language,
+        status=topic_status,
+    )
+
+
+@api.post(
+    "/topic-progress",
+    response_model=feature_schemas.TopicProgressRead,
+    status_code=status.HTTP_201_CREATED,
+    tags=["software-cloud"],
+)
+def topic_progress_create(
+    body: feature_schemas.TopicProgressCreate,
+    db: DB,
+):
+    return feature_services.create_topic_progress(
+        db,
+        body,
+    )
+
+
+@api.patch(
+    "/topic-progress/{item_id}",
+    response_model=feature_schemas.TopicProgressRead,
+    tags=["software-cloud"],
+)
+def topic_progress_patch(
+    item_id: Annotated[int, Path(ge=1)],
+    body: feature_schemas.TopicProgressUpdate,
+    db: DB,
+):
+    item = feature_services.update_topic_progress(
+        db,
+        item_id,
+        body,
+    )
+
+    if item is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Topic progress item not found.",
+        )
+
+    return item
+
+
+# ------------------------------------------------------------
+# LEETCODE
+# ------------------------------------------------------------
+
+@api.get(
+    "/leetcode",
+    response_model=list[feature_schemas.LeetCodeRead],
+    tags=["software-cloud"],
+)
+def leetcode_list(
+    db: DB,
+    difficulty: Optional[str] = None,
+    problem_status: Annotated[
+        Optional[str],
+        Query(alias="status"),
+    ] = None,
+    topic: Optional[str] = None,
+    language: Optional[str] = None,
+    revision_only: bool = False,
+):
+    return feature_services.list_leetcode(
+        db,
+        difficulty=difficulty,
+        status=problem_status,
+        topic=topic,
+        language=language,
+        revision_only=revision_only,
+    )
+
+
+@api.post(
+    "/leetcode",
+    response_model=feature_schemas.LeetCodeRead,
+    status_code=status.HTTP_201_CREATED,
+    tags=["software-cloud"],
+)
+def leetcode_create(
+    body: feature_schemas.LeetCodeCreate,
+    db: DB,
+):
+    return feature_services.create_leetcode(
+        db,
+        body,
+    )
+
+
+@api.patch(
+    "/leetcode/{item_id}",
+    response_model=feature_schemas.LeetCodeRead,
+    tags=["software-cloud"],
+)
+def leetcode_patch(
+    item_id: Annotated[int, Path(ge=1)],
+    body: feature_schemas.LeetCodeUpdate,
+    db: DB,
+):
+    item = feature_services.update_leetcode(
+        db,
+        item_id,
+        body,
+    )
+
+    if item is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="LeetCode problem not found.",
+        )
+
+    return item
+
+
+@api.delete(
+    "/leetcode/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["software-cloud"],
+)
+def leetcode_delete(
+    item_id: Annotated[int, Path(ge=1)],
+    db: DB,
+) -> Response:
+    deleted = feature_services.delete_leetcode(
+        db,
+        item_id,
+    )
+
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="LeetCode problem not found.",
+        )
+
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT
+    )
+
+
+# ------------------------------------------------------------
+# DAILY PLAN
+# ------------------------------------------------------------
+
+@api.get(
+    "/daily-plan",
+    response_model=list[feature_schemas.DailyTaskRead],
+    tags=["software-cloud"],
+)
+def daily_plan_list(
+    db: DB,
+    completed: Optional[bool] = None,
+):
+    return feature_services.list_daily_tasks(
+        db,
+        completed=completed,
+    )
+
+
+@api.get(
+    "/daily-plan/today",
+    response_model=Optional[feature_schemas.DailyTaskRead],
+    tags=["software-cloud"],
+)
+def daily_plan_today(db: DB):
+    return feature_services.get_today_task(db)
+
+
+@api.post(
+    "/daily-plan",
+    response_model=feature_schemas.DailyTaskRead,
+    status_code=status.HTTP_201_CREATED,
+    tags=["software-cloud"],
+)
+def daily_plan_create(
+    body: feature_schemas.DailyTaskCreate,
+    db: DB,
+):
+    return feature_services.create_daily_task(
+        db,
+        body,
+    )
+
+
+@api.patch(
+    "/daily-plan/{item_id}",
+    response_model=feature_schemas.DailyTaskRead,
+    tags=["software-cloud"],
+)
+def daily_plan_patch(
+    item_id: Annotated[int, Path(ge=1)],
+    body: feature_schemas.DailyTaskUpdate,
+    db: DB,
+):
+    item = feature_services.update_daily_task(
+        db,
+        item_id,
+        body,
+    )
+
+    if item is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Daily task not found.",
+        )
+
+    return item
+
+
+# ------------------------------------------------------------
+# STREAK
+# ------------------------------------------------------------
+
+@api.get(
+    "/streak",
+    response_model=feature_schemas.StreakRead,
+    tags=["software-cloud"],
+)
+def streak(db: DB):
+    return feature_services.get_streak(db)
+
+
+# ------------------------------------------------------------
+# PROJECTS
+# ------------------------------------------------------------
+
+@api.get(
+    "/projects",
+    response_model=list[feature_schemas.ProjectRead],
+    tags=["software-cloud"],
+)
+def projects_list(db: DB):
+    return feature_services.list_projects(db)
+
+
+@api.post(
+    "/projects",
+    response_model=feature_schemas.ProjectRead,
+    status_code=status.HTTP_201_CREATED,
+    tags=["software-cloud"],
+)
+def projects_create(
+    body: feature_schemas.ProjectCreate,
+    db: DB,
+):
+    return feature_services.create_project(
+        db,
+        body,
+    )
+
+
+@api.patch(
+    "/projects/{item_id}",
+    response_model=feature_schemas.ProjectRead,
+    tags=["software-cloud"],
+)
+def projects_patch(
+    item_id: Annotated[int, Path(ge=1)],
+    body: feature_schemas.ProjectUpdate,
+    db: DB,
+):
+    item = feature_services.update_project(
+        db,
+        item_id,
+        body,
+    )
+
+    if item is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found.",
+        )
+
+    return item
+
+
+@api.delete(
+    "/projects/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["software-cloud"],
+)
+def projects_delete(
+    item_id: Annotated[int, Path(ge=1)],
+    db: DB,
+) -> Response:
+    deleted = feature_services.delete_project(
+        db,
+        item_id,
+    )
+
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Project not found.",
+        )
+
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT
+    )
+
+
+# ------------------------------------------------------------
+# PROMPT LIBRARY
+# ------------------------------------------------------------
+
+@api.get(
+    "/prompts",
+    response_model=list[feature_schemas.PromptRead],
+    tags=["software-cloud"],
+)
+def prompts_list(
+    db: DB,
+    category: Optional[str] = None,
+):
+    return feature_services.list_prompts(
+        db,
+        category=category,
+    )
+
+
+@api.post(
+    "/prompts",
+    response_model=feature_schemas.PromptRead,
+    status_code=status.HTTP_201_CREATED,
+    tags=["software-cloud"],
+)
+def prompts_create(
+    body: feature_schemas.PromptCreate,
+    db: DB,
+):
+    return feature_services.create_prompt(
+        db,
+        body,
+    )
+
+
+@api.delete(
+    "/prompts/{item_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    tags=["software-cloud"],
+)
+def prompts_delete(
+    item_id: Annotated[int, Path(ge=1)],
+    db: DB,
+) -> Response:
+    deleted = feature_services.delete_prompt(
+        db,
+        item_id,
+    )
+
+    if not deleted:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Prompt not found.",
+        )
+
+    return Response(
+        status_code=status.HTTP_204_NO_CONTENT
+    )
+
+
+# ------------------------------------------------------------
+# USER PREFERENCES
+# ------------------------------------------------------------
+
+@api.get(
+    "/preferences",
+    response_model=feature_schemas.PreferenceRead,
+    tags=["software-cloud"],
+)
+def preferences_read(db: DB):
+    return feature_services.get_preferences(db)
+
+
+@api.put(
+    "/preferences",
+    response_model=feature_schemas.PreferenceRead,
+    tags=["software-cloud"],
+)
+def preferences_update(
+    body: feature_schemas.PreferenceUpdate,
+    db: DB,
+):
+    try:
+        return feature_services.update_preferences(
+            db,
+            body,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+
+# ------------------------------------------------------------
+# CLOUD ENGINEER ROADMAP
+# ------------------------------------------------------------
+
+@api.get(
+    "/cloud-roadmap",
+    response_model=list[feature_schemas.CloudRoadmapRead],
+    tags=["software-cloud"],
+)
+def cloud_roadmap_list(db: DB):
+    return feature_services.list_cloud_roadmap(db)
+
+
+@api.patch(
+    "/cloud-roadmap/{stage_id}",
+    response_model=feature_schemas.CloudRoadmapRead,
+    tags=["software-cloud"],
+)
+def cloud_roadmap_patch(
+    stage_id: Annotated[int, Path(ge=1)],
+    body: feature_schemas.CloudRoadmapUpdate,
+    db: DB,
+):
+    item = feature_services.update_cloud_roadmap(
+        db,
+        stage_id,
+        body,
+    )
+
+    if item is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Cloud roadmap stage not found.",
+        )
+
+    return item
+
+
+# ------------------------------------------------------------
+# ANALYTICS
+# ------------------------------------------------------------
+
+@api.get(
+    "/analytics",
+    response_model=feature_schemas.AnalyticsRead,
+    tags=["software-cloud"],
+)
+def analytics(db: DB):
+    return feature_services.get_analytics(db)
 
 @api.post(
     "/admin/rebuild",

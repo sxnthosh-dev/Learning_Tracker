@@ -1,0 +1,16 @@
+[
+  {"stage":1,"title":"Linux & Networking","description":"Build the infrastructure fundamentals required for cloud engineering.","topics":["Linux fundamentals","Bash scripting","Processes and services"]},
+  {"stage":2,"title":"Git & GitHub","description":"Use professional version-control workflows.","topics":["Git fundamentals","Branching and merging","Pull requests"]},
+  {"stage":3,"title":"Python Automation","description":"Use Python for automation and backend engineering.","topics":["Python scripting","Virtual environments","Automation scripts"]},
+  {"stage":4,"title":"SQL & Databases","description":"Understand relational databases and application data access.","topics":["SQL","SQLite/PostgreSQL concepts","Database migrations"]},
+  {"stage":5,"title":"FastAPI","description":"Build production-style REST APIs.","topics":["FastAPI","Pydantic validation","API testing"]},
+  {"stage":6,"title":"Docker","description":"Containerize applications and services.","topics":["Dockerfiles","Images and containers","Docker Compose"]},
+  {"stage":7,"title":"CI/CD","description":"Automate testing and delivery.","topics":["GitHub Actions","Automated tests","Container image publishing"]},
+  {"stage":8,"title":"AWS Fundamentals","description":"Learn core AWS services and cloud architecture.","topics":["IAM","EC2","S3"]},
+  {"stage":9,"title":"Terraform","description":"Manage cloud infrastructure as code.","topics":["Terraform configuration","Variables and outputs","State management"]},
+  {"stage":10,"title":"Kubernetes","description":"Deploy and operate containerized workloads.","topics":["Pods and deployments","Services","ConfigMaps and Secrets"]},
+  {"stage":11,"title":"Monitoring","description":"Measure application and infrastructure health.","topics":["Prometheus","Grafana","Alerting"]},
+  {"stage":12,"title":"Security","description":"Apply secure engineering practices.","topics":["Secrets management","API security","Least privilege IAM"]},
+  {"stage":13,"title":"System Design","description":"Design reliable and scalable software systems.","topics":["Scalability","Caching","Queues and asynchronous processing"]},
+  {"stage":14,"title":"Portfolio & Job Readiness","description":"Turn technical work into demonstrable career evidence.","topics":["Portfolio project","Documentation","Interview preparation"]}
+]
