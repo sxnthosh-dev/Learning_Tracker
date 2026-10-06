@@ -37,13 +37,53 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
-from . import schemas
-from . import seed_data as sd
-from .models import (
-    TICK_DONE, TICK_OPEN, BlockStatus, DailyPlan, Difficulty, DsaEntry, DsaPattern,
-    JobApplication, JobStatus, MistakeEntry, Phase, PlanSettings, Skill, Task,
-    TaskCategory, TaskStatus, TaskView, WeeklySummary,
-)
+try:
+    from . import schemas
+    from . import seed_data as sd
+    from .models import (
+        TICK_DONE,
+        TICK_OPEN,
+        BlockStatus,
+        DailyPlan,
+        Difficulty,
+        DsaEntry,
+        DsaPattern,
+        JobApplication,
+        JobStatus,
+        MistakeEntry,
+        Phase,
+        PlanSettings,
+        Skill,
+        Task,
+        TaskCategory,
+        TaskStatus,
+        TaskView,
+        WeeklySummary,
+    )
+except ImportError:
+    import schemas
+    import seed_data as sd
+    from models import (
+        TICK_DONE,
+        TICK_OPEN,
+        BlockStatus,
+        DailyPlan,
+        Difficulty,
+        DsaEntry,
+        DsaPattern,
+        JobApplication,
+        JobStatus,
+        MistakeEntry,
+        Phase,
+        PlanSettings,
+        Skill,
+        Task,
+        TaskCategory,
+        TaskStatus,
+        TaskView,
+        WeeklySummary,
+    )
+
 
 WEEKS_TOTAL = sd.WEEKS_TOTAL
 BLOCKS_PER_WEEK = sd.BLOCKS_PER_WEEK

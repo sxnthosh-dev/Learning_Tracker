@@ -1,34 +1,96 @@
+
 """
 schemas.py - Pydantic v2 request/response models.
 
-These replace the worksheet Data Validation rules: every dropdown list is an Enum, every
-numeric rule (hours 0-24, minutes 0-600, help 0-2, confidence 1-5, rating 0-3) is a Field
-constraint, and the Monday-only StartDate rule is a validator.
+These models are used by the FastAPI API for validation and
+serialization of the DevOps Job-Readiness Tracker.
+
+This file supports both execution styles:
+
+    uvicorn main:app --reload
+
+and:
+
+    uvicorn devops_tracker.main:app --reload
 """
+
 from __future__ import annotations
 
 from datetime import date, datetime
 from typing import Annotated, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator
-
-from .models import (
-    BlockStatus, Difficulty, DsaPattern, JobStatus, TaskCategory, TaskStatus, TaskView,
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
 )
 
-NonEmptyStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
-Rating = Annotated[int, Field(ge=0, le=3)]
+
+# ============================================================
+# IMPORT COMPATIBILITY
+# ============================================================
+
+try:
+    from models import (
+        BlockStatus,
+        DsaPattern,
+        Difficulty,
+        JobStatus,
+        TaskCategory,
+        TaskStatus,
+    )
+except ImportError:
+    from models import (
+        BlockStatus,
+        DsaPattern,
+        Difficulty,
+        JobStatus,
+        TaskCategory,
+        TaskStatus,
+    )
+
+
+# ============================================================
+# COMMON TYPES
+# ============================================================
+
+NonEmptyStr = Annotated[
+    str,
+    StringConstraints(
+        strip_whitespace=True,
+        min_length=1,
+    ),
+]
+
+Rating = Annotated[
+    int,
+    Field(
+        ge=0,
+        le=3,
+    ),
+]
 
 
 class ORMModel(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    """
+    Base response model for SQLAlchemy ORM objects.
+    """
+
+    model_config = ConfigDict(
+        from_attributes=True
+    )
 
 
 class Message(BaseModel):
     detail: str
 
 
-# ----------------------------------------------------------------- settings / plan
+# ============================================================
+# SETTINGS / PLAN
+# ============================================================
+
 class SettingsRead(ORMModel):
     owner_name: str
     target_role: str
@@ -43,20 +105,35 @@ class SettingsUpdate(BaseModel):
 
     @field_validator("start_date")
     @classmethod
-    def _must_be_monday(cls, v: Optional[date]) -> Optional[date]:
-        # VBA: validation "=WEEKDAY($L$3,2)=1"
-        if v is not None and v.weekday() != 0:
-            raise ValueError("start_date must be a Monday")
-        return v
+    def _must_be_monday(
+        cls,
+        value: Optional[date],
+    ) -> Optional[date]:
+        """
+        Start date must be Monday.
+
+        Equivalent to the original VBA validation:
+            WEEKDAY(StartDate, 2) = 1
+        """
+
+        if value is not None and value.weekday() != 0:
+            raise ValueError(
+                "start_date must be a Monday"
+            )
+
+        return value
 
 
 class PlanStatus(BaseModel):
-    """Named formulas StartDate / EndDate / CurWeek / ActivePhase."""
+    """
+    Current status of the 18-week plan.
+    """
+
     start_date: date
     end_date: date
     weeks_total: int
-    current_week: int          # 0 = plan has not started
-    active_phase: str          # full phase label, or 'Pre-start' / 'Plan ended'
+    current_week: int
+    active_phase: str
     today: date
 
 
@@ -68,9 +145,15 @@ class PhaseRead(ORMModel):
     week_end: int
 
 
-# ----------------------------------------------------------------- tasks
+# ============================================================
+# TASKS
+# ============================================================
+
 class TaskCreate(BaseModel):
-    phase_id: int = Field(ge=0, le=7)
+    phase_id: int = Field(
+        ge=0,
+        le=7,
+    )
     category: TaskCategory = TaskCategory.TASK
     item: NonEmptyStr
     status: TaskStatus = TaskStatus.NOT_STARTED
@@ -78,7 +161,11 @@ class TaskCreate(BaseModel):
 
 
 class TaskUpdate(BaseModel):
-    phase_id: Optional[int] = Field(default=None, ge=0, le=7)
+    phase_id: Optional[int] = Field(
+        default=None,
+        ge=0,
+        le=7,
+    )
     category: Optional[TaskCategory] = None
     item: Optional[NonEmptyStr] = None
     status: Optional[TaskStatus] = None
@@ -103,22 +190,28 @@ class TaskStatusUpdate(BaseModel):
 
 
 class TaskStatusResult(BaseModel):
-    """Result of a status change - carries the 'phase complete' celebration flag (CheckPhaseComplete)."""
+    """
+    Result returned after changing a task status.
+    """
+
     task: TaskRead
     phase_complete: bool = False
     message: Optional[str] = None
 
 
-# ----------------------------------------------------------------- weekly / daily
+# ============================================================
+# WEEKLY / DAILY
+# ============================================================
+
 class WeeklyRowRead(BaseModel):
     week: int
     week_of: date
     phase_code: str
     focus: str
     planned_hours: float
-    actual_hours: Optional[float]      # blank until a day has Actual hrs > 0
-    dsa_solved: Optional[int]          # blank for weeks that have not started
-    blocks_done_pct: float             # done blocks / 17
+    actual_hours: Optional[float]
+    dsa_solved: Optional[int]
+    blocks_done_pct: float
     build_shipped: bool
     confidence: Optional[int]
     checkpoint_phase: Optional[str]
@@ -142,9 +235,17 @@ class WeeklyReport(BaseModel):
 
 
 class WeeklyUpdate(BaseModel):
-    planned_hours: Optional[float] = Field(default=None, ge=0, le=168)
+    planned_hours: Optional[float] = Field(
+        default=None,
+        ge=0,
+        le=168,
+    )
     build_shipped: Optional[bool] = None
-    confidence: Optional[int] = Field(default=None, ge=1, le=5)
+    confidence: Optional[int] = Field(
+        default=None,
+        ge=1,
+        le=5,
+    )
     checkpoint_done: Optional[bool] = None
     notes: Optional[str] = None
 
@@ -153,7 +254,7 @@ class DailyRead(BaseModel):
     id: int
     week: int
     day_index: int
-    day: str                            # Mon..Sun
+    day: str
     day_date: date
     plan: str
     planned_hours: float
@@ -168,14 +269,21 @@ class DailyRead(BaseModel):
 
 
 class DailyUpdate(BaseModel):
-    actual_hours: Optional[float] = Field(default=None, ge=0, le=24)   # validation 0-24
+    actual_hours: Optional[float] = Field(
+        default=None,
+        ge=0,
+        le=24,
+    )
     block1: Optional[BlockStatus] = None
     block2: Optional[BlockStatus] = None
     block3: Optional[BlockStatus] = None
     notes: Optional[str] = None
 
 
-# ----------------------------------------------------------------- skills
+# ============================================================
+# SKILLS
+# ============================================================
+
 class SkillRead(BaseModel):
     id: int
     skill_type: str
@@ -197,24 +305,35 @@ class SkillUpdate(BaseModel):
 
 class SkillsReport(BaseModel):
     skills: list[SkillRead]
-    summary: str                        # "Must-haves at level 3: x of y | Average latest rating: z / 3"
+    summary: str
     must_haves_at_level_3: int
     must_haves_total: int
     average_latest_rating: float
 
 
-# ----------------------------------------------------------------- DSA log
+# ============================================================
+# DSA LOG
+# ============================================================
+
 class DsaBase(BaseModel):
     pattern: Optional[DsaPattern] = None
     difficulty: Optional[Difficulty] = None
-    time_min: Optional[int] = Field(default=None, ge=0, le=600)
-    help_level: Optional[int] = Field(default=None, ge=0, le=2)
+    time_min: Optional[int] = Field(
+        default=None,
+        ge=0,
+        le=600,
+    )
+    help_level: Optional[int] = Field(
+        default=None,
+        ge=0,
+        le=2,
+    )
     key_idea: Optional[str] = None
 
 
 class DsaCreate(DsaBase):
     problem: NonEmptyStr
-    solved_on: Optional[date] = None    # stamped with today when omitted (OnLogsChanged)
+    solved_on: Optional[date] = None
     resolved: bool = False
 
 
@@ -236,7 +355,10 @@ class DsaRead(ORMModel):
     key_idea: Optional[str]
 
 
-# ----------------------------------------------------------------- jobs
+# ============================================================
+# JOBS
+# ============================================================
+
 class JobBase(BaseModel):
     role: Optional[str] = None
     source: Optional[str] = None
@@ -247,7 +369,7 @@ class JobBase(BaseModel):
 
 class JobCreate(JobBase):
     company: NonEmptyStr
-    applied_on: Optional[date] = None   # stamped with today when omitted
+    applied_on: Optional[date] = None
 
 
 class JobUpdate(JobBase):
@@ -264,11 +386,14 @@ class JobRead(BaseModel):
     status: Optional[JobStatus]
     follow_up_on: Optional[date]
     days_waiting: Optional[int]
-    follow_up_overdue: bool             # the red conditional format on the follow-up cell
+    follow_up_overdue: bool
     learned: Optional[str]
 
 
-# ----------------------------------------------------------------- mistakes
+# ============================================================
+# MISTAKES
+# ============================================================
+
 class MistakeCreate(BaseModel):
     what_went_wrong: NonEmptyStr
     correction: Optional[str] = None
@@ -291,7 +416,10 @@ class MistakeRead(ORMModel):
     topic: Optional[str]
 
 
-# ----------------------------------------------------------------- dashboard
+# ============================================================
+# DASHBOARD
+# ============================================================
+
 class OverallCard(BaseModel):
     pct_done: float
     bar: str
@@ -325,15 +453,15 @@ class PhaseProgressRow(BaseModel):
     done: int
     total: int
     progress: float
-    status: str                         # Complete / Upcoming / Behind / Active / "-"
-    exit_tests: str                     # "x / y" or "-"
+    status: str
+    exit_tests: str
     in_progress: int
 
 
 class NextUpItem(BaseModel):
     task_id: int
     phase_code: str
-    item: str                           # truncated to 68 chars + "..." like the sheet
+    item: str
 
 
 class MetricRow(BaseModel):
@@ -354,14 +482,20 @@ class DashboardRead(BaseModel):
     phases: list[PhaseProgressRow]
     totals: PhaseProgressRow
     next_up: list[NextUpItem]
-    status_line: str                    # "Completed n | In progress n | Not started n"
+    status_line: str
     snapshot: list[MetricRow]
     last_refreshed: Optional[datetime]
 
 
-# ----------------------------------------------------------------- lists / admin
+# ============================================================
+# LISTS / ADMIN
+# ============================================================
+
 class ListsRead(BaseModel):
-    """Dropdown sources from the hidden 'Lists' sheet (named ranges lst*)."""
+    """
+    Dropdown sources used by the original tracker.
+    """
+
     status: list[str]
     view: list[str]
     phase_filter: list[str]
@@ -384,3 +518,4 @@ class RebuildResult(BaseModel):
     detail: str
     tasks: int
     daily_rows: int
+
